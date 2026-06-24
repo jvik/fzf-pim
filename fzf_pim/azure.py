@@ -66,6 +66,19 @@ def is_auth_error(msg: str) -> bool:
     )
 
 
+def is_scope_error(msg: str) -> bool:
+    """Return True if *msg* indicates a missing OAuth scope / consent."""
+    lowered = msg.lower()
+    return any(
+        token in lowered
+        for token in (
+            "permissionscopenotgranted",
+            "authorization_requestdenied",
+            "insufficient privileges",
+        )
+    )
+
+
 # ---------------------------------------------------------------------------
 # Data models
 # ---------------------------------------------------------------------------
@@ -91,6 +104,16 @@ class EligibleRole:
     def is_global(self) -> bool:
         """True if assigned at management group or root scope (not subscription-scoped)."""
         return not self.scope.startswith("/subscriptions/")
+
+
+@dataclass
+class EntraEligibleRole:
+    role_name: str
+    role_definition_id: str
+    principal_id: str
+    eligibility_schedule_id: str  # unifiedRoleEligibilitySchedule id
+    expiry: str | None
+    is_active: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -255,3 +278,93 @@ def activate_role(
         response.get("properties", {}).get("status"),
     )
     return response
+
+
+# ---------------------------------------------------------------------------
+# Microsoft Entra (Azure AD) PIM — Graph API
+# ---------------------------------------------------------------------------
+
+_GRAPH = "https://graph.microsoft.com"
+
+
+def _list_active_entra_role_def_ids(principal_id: str) -> frozenset[str]:
+    """Return role definition IDs currently PIM-activated in Entra for *principal_id*."""
+    url = (
+        f"{_GRAPH}/v1.0/roleManagement/directory/roleAssignmentScheduleInstances"
+        f"?$filter=principalId eq '{principal_id}' and assignmentType eq 'Activated'"
+    )
+    try:
+        data = _run_az("rest", "--method", "GET", "--url", url, "--resource", _GRAPH)
+    except RuntimeError:
+        return frozenset()
+    return frozenset(item.get("roleDefinitionId", "") for item in data.get("value", []))
+
+
+def list_entra_eligible_roles() -> list[EntraEligibleRole]:
+    """List eligible Entra PIM role assignments for the signed-in user."""
+    user_id = get_current_user()
+    active_def_ids = _list_active_entra_role_def_ids(user_id)
+    url = (
+        f"{_GRAPH}/v1.0/roleManagement/directory/roleEligibilityScheduleInstances"
+        f"?$filter=principalId eq '{user_id}'&$expand=roleDefinition"
+    )
+    data = _run_az("rest", "--method", "GET", "--url", url, "--resource", _GRAPH)
+    roles: list[EntraEligibleRole] = []
+    for item in data.get("value", []):
+        role_def = item.get("roleDefinition") or {}
+        role_def_id = item.get("roleDefinitionId", "")
+        roles.append(
+            EntraEligibleRole(
+                role_name=role_def.get("displayName", "Unknown"),
+                role_definition_id=role_def_id,
+                principal_id=user_id,
+                eligibility_schedule_id=item.get(
+                    "roleEligibilityScheduleId", item.get("id", str(uuid.uuid4()))
+                ),
+                expiry=item.get("endDateTime"),
+                is_active=role_def_id in active_def_ids,
+            )
+        )
+    return roles
+
+
+def activate_entra_role(
+    role: EntraEligibleRole,
+    justification: str,
+    duration: str,
+    dry_run: bool = False,
+) -> dict:
+    """Submit a selfActivate request for an Entra PIM role via Microsoft Graph."""
+    request_id = str(uuid.uuid4())
+    if dry_run:
+        log.debug("dry-run: skipping Entra activation of %s", role.role_name)
+        return {"id": request_id, "status": "DryRun"}
+    body = json.dumps(
+        {
+            "action": "selfActivate",
+            "principalId": role.principal_id,
+            "roleDefinitionId": role.role_definition_id,
+            "directoryScopeId": "/",
+            "justification": justification,
+            "scheduleInfo": {
+                "expiration": {
+                    "type": "afterDuration",
+                    "duration": duration,
+                }
+            },
+        }
+    )
+    url = f"{_GRAPH}/v1.0/roleManagement/directory/roleAssignmentScheduleRequests"
+    log.debug("activating Entra role %s (request %s)", role.role_name, request_id)
+    response = _run_az(
+        "rest", "--method", "POST", "--url", url, "--body", body,
+        "--headers", "Content-Type=application/json",
+        "--resource", _GRAPH,
+    )
+    log.debug(
+        "Entra activation response for %s: status=%s",
+        role.role_name,
+        response.get("status"),
+    )
+    return response
+
