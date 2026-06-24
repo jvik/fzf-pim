@@ -11,6 +11,9 @@ dependencies = [
     "textual>=0.70.0",
 ]
 
+[dependency-groups]
+dev = ["pytest"]
+
 [project.scripts]
 fzf-pim = "fzf_pim.__main__:main"
 
