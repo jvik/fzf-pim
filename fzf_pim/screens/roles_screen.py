@@ -19,6 +19,11 @@ class RolesScreen(Screen):
         Binding("enter", "proceed", "Activate selected", show=True, priority=True),
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("tab", "focus_list", "Focus list", show=True),
+        Binding("slash", "focus_filter", "Filter", show=True),
+        Binding("j", "vim_down", "↓", show=False),
+        Binding("k", "vim_up", "↑", show=False),
+        Binding("g", "vim_top", "Top", show=False),
+        Binding("G", "vim_bottom", "Bottom", show=False),
     ]
 
     def __init__(self, subscription_ids: list[str]) -> None:
@@ -163,6 +168,29 @@ class RolesScreen(Screen):
 
     def action_focus_list(self) -> None:
         self.query_one("#role-list").focus()
+
+    def action_focus_filter(self) -> None:
+        self.query_one("#filter").focus()
+
+    def action_vim_down(self) -> None:
+        w = self.focused
+        if hasattr(w, "action_cursor_down"):
+            w.action_cursor_down()
+
+    def action_vim_up(self) -> None:
+        w = self.focused
+        if hasattr(w, "action_cursor_up"):
+            w.action_cursor_up()
+
+    def action_vim_top(self) -> None:
+        w = self.focused
+        if hasattr(w, "scroll_home"):
+            w.scroll_home(animate=False)
+
+    def action_vim_bottom(self) -> None:
+        w = self.focused
+        if hasattr(w, "scroll_end"):
+            w.scroll_end(animate=False)
 
     def action_proceed(self) -> None:
         # Merge any pending visible selections

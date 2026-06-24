@@ -20,6 +20,10 @@ class ScopeScreen(Screen):
         Binding("a", "select_all", "All", show=True),
         Binding("n", "select_none", "None", show=True),
         Binding("q", "quit_app", "Quit", show=True),
+        Binding("j", "vim_down", "↓", show=False),
+        Binding("k", "vim_up", "↑", show=False),
+        Binding("g", "vim_top", "Top", show=False),
+        Binding("G", "vim_bottom", "Bottom", show=False),
     ]
 
     def compose(self) -> ComposeResult:
@@ -46,11 +50,11 @@ class ScopeScreen(Screen):
         self.query_one("#spinner").display = False
         self.query_one("#loading-label", Label).update(
             f"Select subscriptions  ({len(subs)} found)"
-            "   [dim]a[/dim]=all  [dim]n[/dim]=none  [dim]Enter[/dim]=proceed"
+            "   [dim]j/k[/dim]=nav  [dim]a[/dim]=all  [dim]n[/dim]=none  [dim]Enter[/dim]=proceed"
         )
         sl = self.query_one("#sub-list", SelectionList)
         for sub in subs:
-            sl.add_option((f"{sub.name}  [dim]{sub.id}[/dim]", sub.id, True))
+            sl.add_option((f"{sub.name}  [dim]{sub.id}[/dim]", sub.id, False))
         sl.display = True
         sl.focus()
 
@@ -89,3 +93,23 @@ class ScopeScreen(Screen):
 
     def action_quit_app(self) -> None:
         self.app.exit()
+
+    def action_vim_down(self) -> None:
+        w = self.focused
+        if hasattr(w, "action_cursor_down"):
+            w.action_cursor_down()
+
+    def action_vim_up(self) -> None:
+        w = self.focused
+        if hasattr(w, "action_cursor_up"):
+            w.action_cursor_up()
+
+    def action_vim_top(self) -> None:
+        w = self.focused
+        if hasattr(w, "scroll_home"):
+            w.scroll_home(animate=False)
+
+    def action_vim_bottom(self) -> None:
+        w = self.focused
+        if hasattr(w, "scroll_end"):
+            w.scroll_end(animate=False)
