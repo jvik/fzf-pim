@@ -134,11 +134,15 @@ class RolesScreen(Screen):
             for i, role in items:
                 text = f"{role.role_name}  —  {role.scope_display_name}"
                 expiry_tag = f"  [expires {azure.format_expiry(role.expiry)}]" if role.expiry else ""
-                display = f"{text}{expiry_tag}"
+                active_tag = "  (active)" if role.is_active else ""
+                display = f"{text}{expiry_tag}{active_tag}"
                 if q and q not in display.lower():
                     continue
-                sl.add_option(Selection(display, i, i in self._selected))
-                self._visible_indices.add(i)
+                if role.is_active:
+                    sl.add_option(Selection(display, i, False, disabled=True))
+                else:
+                    sl.add_option(Selection(display, i, i in self._selected))
+                    self._visible_indices.add(i)
 
         _add(sub_items)
 

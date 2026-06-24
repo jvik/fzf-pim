@@ -85,6 +85,7 @@ class EligibleRole:
     principal_id: str
     eligibility_schedule_id: str  # short GUID used in linkedRoleEligibilityScheduleId
     expiry: str | None            # ISO 8601 datetime string or None
+    is_active: bool = False       # True if already PIM-activated
 
     @property
     def is_global(self) -> bool:
@@ -129,8 +130,35 @@ def list_subscriptions() -> list[Subscription]:
     return [Subscription(id=s["id"], name=s["name"]) for s in data]
 
 
+def _list_active_role_keys(scope: str) -> frozenset[tuple[str, str]]:
+    """Return a set of (role_definition_id, scope) for currently active PIM assignments."""
+    url = (
+        f"https://management.azure.com{scope}"
+        f"/providers/Microsoft.Authorization/roleAssignmentScheduleInstances"
+        f"?$filter=asTarget()&api-version=2020-10-01"
+    )
+    try:
+        data = _run_az("rest", "--method", "GET", "--url", url)
+    except RuntimeError:
+        return frozenset()
+    keys: set[tuple[str, str]] = set()
+    for item in data.get("value", []):
+        props = item.get("properties", {})
+        # Only count Activated (PIM-activated) assignments, not permanent ones
+        if props.get("assignmentType") != "Activated":
+            continue
+        expanded = props.get("expandedProperties", {})
+        role_def_id = props.get("roleDefinitionId", "")
+        active_scope = expanded.get("scope", {}).get("id") or scope
+        keys.add((role_def_id, active_scope))
+    return frozenset(keys)
+
+
 def list_eligible_roles(subscription_id: str) -> list[EligibleRole]:
-    """List eligible PIM role assignments for the signed-in user in *subscription_id*."""
+    """List eligible PIM role assignments for the signed-in user in *subscription_id*.
+
+    Roles that are already active (PIM-activated) are excluded from the result.
+    """
     scope = f"/subscriptions/{subscription_id}"
     url = (
         f"https://management.azure.com{scope}"
@@ -143,6 +171,7 @@ def list_eligible_roles(subscription_id: str) -> list[EligibleRole]:
     # object ID.  We always substitute the real user ID here so activation
     # works for both direct and group-based eligibilities.
     user_id = get_current_user()
+    active_keys = _list_active_role_keys(scope)
     data = _run_az("rest", "--method", "GET", "--url", url)
     roles: list[EligibleRole] = []
     for item in data.get("value", []):
@@ -152,10 +181,14 @@ def list_eligible_roles(subscription_id: str) -> list[EligibleRole]:
         sched_path: str = props.get("roleEligibilityScheduleId", "")
         sched_id = sched_path.rsplit("/", 1)[-1] if "/" in sched_path else item.get("name", str(uuid.uuid4()))
         actual_scope = expanded.get("scope", {}).get("id") or scope
+        role_def_id = props.get("roleDefinitionId", "")
+        already_active = (role_def_id, actual_scope) in active_keys
+        if already_active:
+            log.debug("marking already-active role %s on %s", role_def_id, actual_scope)
         roles.append(
             EligibleRole(
                 role_name=expanded.get("roleDefinition", {}).get("displayName", "Unknown"),
-                role_definition_id=props.get("roleDefinitionId", ""),
+                role_definition_id=role_def_id,
                 scope=actual_scope,
                 scope_display_name=(
                     expanded.get("scope", {}).get("displayName") or subscription_id
@@ -163,6 +196,7 @@ def list_eligible_roles(subscription_id: str) -> list[EligibleRole]:
                 principal_id=user_id,
                 eligibility_schedule_id=sched_id,
                 expiry=props.get("endDateTime"),
+                is_active=already_active,
             )
         )
     return roles

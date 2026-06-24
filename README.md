@@ -4,6 +4,10 @@ A terminal UI for activating Azure PIM eligible roles with multiselect.
 
 Authentication is fully delegated to the active `az` CLI session — no credentials are stored or managed by the app.
 
+## Platform support
+
+Works on Linux, macOS, and WSL (Windows Subsystem for Linux).
+
 ## Prerequisites
 
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (`az`) — logged in with `az login`
