@@ -24,7 +24,6 @@ class ScopeScreen(Screen):
         Binding("shift+tab", "focus_filter", "Prev box", show=True),
         Binding("escape", "focus_list", "Focus list", show=False),
         Binding("a", "select_all", "All", show=True),
-        Binding("ctrl+a", "select_all_visible", "Select all", show=True),
         Binding("n", "select_none", "None", show=True),
         Binding("q", "quit_app", "Quit", show=True),
         Binding("j", "vim_down", "↓", show=False),

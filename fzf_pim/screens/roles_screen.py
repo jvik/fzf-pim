@@ -24,7 +24,7 @@ class RolesScreen(Screen):
         Binding("tab", "focus_list", "Next box", show=True),
         Binding("shift+tab", "focus_filter", "Prev box", show=True),
         Binding("slash", "focus_filter", "Filter", show=False),
-        Binding("ctrl+a", "select_all_visible", "Select all", show=True),
+        Binding("a", "select_all_visible", "All", show=True),
         Binding("j", "vim_down", "↓", show=False),
         Binding("k", "vim_up", "↑", show=False),
         Binding("g", "vim_top", "Top", show=False),
