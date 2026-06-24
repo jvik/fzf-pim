@@ -10,7 +10,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.coordinate import Coordinate
 from textual.screen import Screen
-from textual.widgets import Button, DataTable, Footer, Header, Input, Label, RichLog
+from textual.widgets import Button, DataTable, Footer, Header, Input, Label, RichLog, Select
 
 from fzf_pim import azure
 
@@ -18,6 +18,15 @@ log = logging.getLogger(__name__)
 
 # Status column index in the DataTable
 _COL_STATUS = 3
+
+_DURATION_OPTIONS: list[tuple[str, str]] = [
+    ("30 min", "PT30M"),
+    ("1 hour", "PT1H"),
+    ("2 hours", "PT2H"),
+    ("4 hours", "PT4H"),
+    ("6 hours", "PT6H"),
+    ("8 hours", "PT8H"),
+]
 
 
 class ActivationScreen(Screen):
@@ -47,11 +56,9 @@ class ActivationScreen(Screen):
                     placeholder="Reason for activation",
                     id="justification",
                 )
-                yield Label(
-                    "Duration  [dim](ISO 8601, e.g. PT8H · PT1H30M · PT30M)[/dim]"
-                )
-                yield Input(
-                    placeholder="PT8H",
+                yield Label("Duration")
+                yield Select(
+                    _DURATION_OPTIONS,
                     value="PT8H",
                     id="duration",
                 )
@@ -81,10 +88,6 @@ class ActivationScreen(Screen):
     def on_justification_submitted(self, event: Input.Submitted) -> None:  # noqa: ARG002
         self.query_one("#duration").focus()
 
-    @on(Input.Submitted, "#duration")
-    def on_duration_submitted(self, event: Input.Submitted) -> None:  # noqa: ARG002
-        self.query_one("#btn-activate").focus()
-
     @on(Button.Pressed, "#btn-back")
     def on_back_pressed(self) -> None:
         self.action_back()
@@ -98,14 +101,7 @@ class ActivationScreen(Screen):
             self.notify("Justification is required.", severity="warning")
             self.query_one("#justification").focus()
             return
-        duration = self.query_one("#duration", Input).value.strip() or "PT8H"
-        if not azure.validate_duration(duration):
-            self.notify(
-                f"Invalid duration '{duration}'. Use ISO 8601 format, e.g. PT8H.",
-                severity="warning",
-            )
-            self.query_one("#duration").focus()
-            return
+        duration = self.query_one("#duration", Select).value or "PT8H"
 
         self._activating = True
         self.query_one("#btn-activate", Button).disabled = True
