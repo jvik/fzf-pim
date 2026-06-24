@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0](https://github.com/jvik/fzf-pim/compare/v1.2.0...v1.3.0) (2026-06-24)
+
+
+### Features
+
+* Add upgrade instructions to README ([56407b8](https://github.com/jvik/fzf-pim/commit/56407b8522cdfdaefba42b33cdf6a71ebebc4b7d))
+
+
+### Bug Fixes
+
+* Replace duration input with a select dropdown for better usability ([78cc135](https://github.com/jvik/fzf-pim/commit/78cc135fbcc7b493920d7decc3537bfe1596e729))
+* Update key bindings for clarity in roles and scope screens ([56407b8](https://github.com/jvik/fzf-pim/commit/56407b8522cdfdaefba42b33cdf6a71ebebc4b7d))
+
 ## [1.2.0](https://github.com/jvik/fzf-pim/compare/v1.1.0...v1.2.0) (2026-06-24)
 
 
