@@ -14,8 +14,38 @@ jobs:
     release-please:
         if: github.event.workflow_run.conclusion == 'success'
         runs-on: ubuntu-latest
+        outputs:
+            release_created: ${{ steps.release.outputs.release_created }}
+            tag_name: ${{ steps.release.outputs.tag_name }}
         steps:
             - uses: googleapis/release-please-action@v4
               id: release
               with:
                   release-type: simple
+
+    build-and-publish:
+        needs: release-please
+        if: needs.release-please.outputs.release_created == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ needs.release-please.outputs.tag_name }}
+                  fetch-depth: 0
+
+            - uses: astral-sh/setup-uv@v6
+
+            - name: Build package
+              run: uv build
+
+            - name: Upload wheel as artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: fzf-pim-dist
+                  path: dist/*
+
+            - name: Upload release assets
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ needs.release-please.outputs.tag_name }}
+                  files: dist/*
