@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fzf-pim"
+version = "0.1.0"
+description = "TUI for Azure PIM role activation with multiselect"
+requires-python = ">=3.11"
+dependencies = [
+    "textual>=0.70.0",
+]
+
+[project.scripts]
+fzf-pim = "fzf_pim.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fzf_pim"]

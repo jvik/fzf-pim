@@ -1,0 +1,170 @@
+"""Roles screen — fzf-like multiselect for eligible PIM roles."""
+
+from __future__ import annotations
+
+from textual import on, work
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.containers import Vertical
+from textual.screen import Screen
+from textual.widgets import Footer, Header, Input, Label, LoadingIndicator, SelectionList
+
+from fzf_pim import azure
+
+
+class RolesScreen(Screen):
+    """Fuzzy-filter and multiselect eligible PIM roles."""
+
+    BINDINGS = [
+        Binding("enter", "proceed", "Activate selected", show=True, priority=True),
+        Binding("escape", "app.pop_screen", "Back", show=True),
+        Binding("tab", "focus_list", "Focus list", show=True),
+    ]
+
+    def __init__(self, subscription_ids: list[str]) -> None:
+        super().__init__()
+        self._sub_ids = subscription_ids
+        self.all_roles: list[azure.EligibleRole] = []
+        self._selected: set[int] = set()       # indices into all_roles
+        self._visible_indices: set[int] = set()
+        self._loaded_count = 0
+        self._rebuilding = False
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=False)
+        with Vertical(id="main"):
+            yield Label(
+                f"Loading roles from {len(self._sub_ids)} subscription(s)…",
+                id="loading-label",
+            )
+            yield LoadingIndicator(id="spinner")
+            yield Input(placeholder="Filter roles… (type to search)", id="filter")
+            yield SelectionList(id="role-list")
+            yield Label("", id="status")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self.query_one("#filter").display = False
+        self.query_one("#role-list").display = False
+        self.query_one("#status").display = False
+        for sub_id in self._sub_ids:
+            self._load_roles_for_sub(sub_id)
+
+    # ------------------------------------------------------------------
+    # Background loading (one worker per subscription, run in parallel)
+    # ------------------------------------------------------------------
+
+    @work(thread=True)
+    def _load_roles_for_sub(self, sub_id: str) -> None:
+        try:
+            roles = azure.list_eligible_roles(sub_id)
+            self.call_from_thread(self._on_roles_loaded, sub_id, roles)
+        except Exception as exc:
+            self.call_from_thread(self._on_roles_error, sub_id, str(exc))
+
+    def _on_roles_loaded(
+        self, sub_id: str, roles: list[azure.EligibleRole]
+    ) -> None:
+        self.all_roles.extend(roles)
+        self._increment_loaded()
+
+    def _on_roles_error(self, sub_id: str, msg: str) -> None:
+        self.notify(f"[{sub_id[:8]}…] {msg}", severity="error", timeout=8)
+        self._increment_loaded()
+
+    def _increment_loaded(self) -> None:
+        self._loaded_count += 1
+        self.query_one("#loading-label", Label).update(
+            f"Loading roles… {self._loaded_count}/{len(self._sub_ids)}"
+        )
+        if self._loaded_count < len(self._sub_ids):
+            return
+        # All subscriptions have responded
+        self.query_one("#spinner").display = False
+        self.query_one("#loading-label").display = False
+        if not self.all_roles:
+            self.notify(
+                "No eligible PIM roles found in the selected subscriptions.",
+                severity="warning",
+                timeout=10,
+            )
+            return
+        self.all_roles.sort(key=lambda r: (r.role_name, r.scope_display_name))
+        self.query_one("#filter").display = True
+        self.query_one("#role-list").display = True
+        self.query_one("#status").display = True
+        self._rebuild_list("")
+        self.query_one("#filter").focus()
+
+    # ------------------------------------------------------------------
+    # List management
+    # ------------------------------------------------------------------
+
+    def _rebuild_list(self, query: str) -> None:
+        sl = self.query_one("#role-list", SelectionList)
+        self._rebuilding = True
+        sl.clear_options()
+        self._visible_indices = set()
+        q = query.strip().lower()
+        for i, role in enumerate(self.all_roles):
+            text = f"{role.role_name}  —  {role.scope_display_name}"
+            expiry_tag = f"  [expires {azure.format_expiry(role.expiry)}]" if role.expiry else ""
+            display = f"{text}{expiry_tag}"
+            if q and q not in display.lower():
+                continue
+            sl.add_option((display, i, i in self._selected))
+            self._visible_indices.add(i)
+        self._rebuilding = False
+        self._update_status()
+
+    def _update_status(self) -> None:
+        n_sel = len(self._selected)
+        n_vis = len(self._visible_indices)
+        n_total = len(self.all_roles)
+        parts = [f"{n_sel} selected"]
+        if n_vis < n_total:
+            parts.append(f"{n_vis}/{n_total} shown")
+        self.query_one("#status", Label).update("  ·  ".join(parts))
+
+    # ------------------------------------------------------------------
+    # Event handlers
+    # ------------------------------------------------------------------
+
+    @on(Input.Changed, "#filter")
+    def on_filter_changed(self, event: Input.Changed) -> None:
+        # Snapshot visible selections before rebuilding
+        sl = self.query_one("#role-list", SelectionList)
+        self._selected.update(sl.selected)
+        self._rebuild_list(event.value)
+
+    @on(SelectionList.SelectedChanged, "#role-list")
+    def on_selection_changed(self, event: SelectionList.SelectedChanged) -> None:
+        if self._rebuilding:
+            return
+        visible_selected: set[int] = set(event.selection_list.selected)
+        visible_unselected = self._visible_indices - visible_selected
+        self._selected |= visible_selected
+        self._selected -= visible_unselected
+        self._update_status()
+
+    # ------------------------------------------------------------------
+    # Actions
+    # ------------------------------------------------------------------
+
+    def action_focus_list(self) -> None:
+        self.query_one("#role-list").focus()
+
+    def action_proceed(self) -> None:
+        # Merge any pending visible selections
+        if self.query_one("#role-list").display:
+            sl = self.query_one("#role-list", SelectionList)
+            self._selected.update(sl.selected)
+            visible_unselected = self._visible_indices - set(sl.selected)
+            self._selected -= visible_unselected
+
+        selected_roles = [self.all_roles[i] for i in sorted(self._selected)]
+        if not selected_roles:
+            self.notify("Select at least one role.", severity="warning")
+            return
+        from fzf_pim.screens.activation_screen import ActivationScreen
+        self.app.push_screen(ActivationScreen(selected_roles))

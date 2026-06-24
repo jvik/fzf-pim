@@ -1,0 +1,57 @@
+/* fzf-pim global styles */
+
+Screen {
+    background: $surface;
+}
+
+/* Shared layout */
+#main {
+    padding: 1 2;
+    height: 1fr;
+}
+
+/* Loading / status labels */
+#loading-label {
+    margin: 1 0;
+    color: $text-muted;
+}
+
+#status {
+    height: 1;
+    color: $text-muted;
+    margin-top: 1;
+}
+
+/* Scope screen */
+SelectionList {
+    height: 1fr;
+    border: tall $panel;
+}
+
+/* Roles screen */
+#filter {
+    margin-bottom: 1;
+}
+
+/* Activation screen */
+DataTable {
+    height: auto;
+    max-height: 14;
+    border: tall $panel;
+    margin-bottom: 1;
+}
+
+#form Label {
+    margin-top: 1;
+    color: $text-muted;
+}
+
+#buttons {
+    height: 3;
+    margin-top: 1;
+    align: left middle;
+}
+
+#btn-activate {
+    margin-right: 2;
+}
