@@ -59,3 +59,11 @@ fzf-pim
 ```sh
 fzf-pim --dry-run
 ```
+
+**Verbose logging** (write debug logs to a file):
+
+```sh
+fzf-pim --log /tmp/fzf-pim.log
+```
+
+Logs include all `az rest` calls and responses. Useful for troubleshooting.
