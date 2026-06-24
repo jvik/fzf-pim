@@ -71,6 +71,14 @@ class ActivationScreen(Screen):
     # Button handlers
     # ------------------------------------------------------------------
 
+    @on(Input.Submitted, "#justification")
+    def on_justification_submitted(self, event: Input.Submitted) -> None:  # noqa: ARG002
+        self.query_one("#duration").focus()
+
+    @on(Input.Submitted, "#duration")
+    def on_duration_submitted(self, event: Input.Submitted) -> None:  # noqa: ARG002
+        self.query_one("#btn-activate").focus()
+
     @on(Button.Pressed, "#btn-back")
     def on_back_pressed(self) -> None:
         self.action_back()

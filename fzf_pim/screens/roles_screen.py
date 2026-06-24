@@ -9,6 +9,8 @@ from textual.containers import Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Input, Label, LoadingIndicator, SelectionList
 
+MAX_ROLES = 3
+
 from fzf_pim import azure
 
 
@@ -209,6 +211,9 @@ class RolesScreen(Screen):
             w.scroll_end(animate=False)
 
     def action_proceed(self) -> None:
+        if self.focused is self.query_one("#filter"):
+            self.action_focus_list()
+            return
         # Merge any pending visible selections
         if self.query_one("#role-list").display:
             sl = self.query_one("#role-list", SelectionList)
@@ -220,5 +225,11 @@ class RolesScreen(Screen):
         if not selected_roles:
             self.notify("Select at least one role.", severity="warning")
             return
+        if len(selected_roles) > MAX_ROLES:
+            self.notify(
+                f"You selected {len(selected_roles)} roles. Activating more than {MAX_ROLES} at once can be slow and error-prone. Proceed with care.",
+                severity="warning",
+                timeout=8,
+            )
         from fzf_pim.screens.activation_screen import ActivationScreen
         self.app.push_screen(ActivationScreen(selected_roles))

@@ -9,6 +9,8 @@ from textual.containers import Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Input, Label, LoadingIndicator, SelectionList
 
+MAX_SUBSCRIPTIONS = 3
+
 from fzf_pim import azure
 
 
@@ -43,11 +45,13 @@ class ScopeScreen(Screen):
             yield LoadingIndicator(id="spinner")
             yield Input(placeholder="Filter subscriptions… (type to search)", id="filter")
             yield SelectionList(id="sub-list")
+            yield Label("", id="sel-count")
         yield Footer()
 
     def on_mount(self) -> None:
         self.query_one("#sub-list").display = False
         self.query_one("#filter").display = False
+        self.query_one("#sel-count").display = False
         self._load_subs()
 
     @work(thread=True)
@@ -69,6 +73,8 @@ class ScopeScreen(Screen):
         self._rebuild_list("")
         sl = self.query_one("#sub-list", SelectionList)
         sl.display = True
+        self.query_one("#sel-count").display = True
+        self._update_sel_count()
         sl.focus()
 
     def _show_error(self, msg: str) -> None:
@@ -104,6 +110,21 @@ class ScopeScreen(Screen):
             self._visible_ids.add(sub.id)
         self._rebuilding = False
 
+    @on(SelectionList.SelectedChanged, "#sub-list")
+    def on_sub_selection_changed(self, event: SelectionList.SelectedChanged) -> None:  # noqa: ARG002
+        if not self._rebuilding:
+            self._update_sel_count()
+
+    def _update_sel_count(self) -> None:
+        n = len(self.query_one("#sub-list", SelectionList).selected)
+        label = self.query_one("#sel-count", Label)
+        if n == 0:
+            label.update("[dim]No subscriptions selected[/dim]")
+        elif n > MAX_SUBSCRIPTIONS:
+            label.update(f"[bold yellow]{n} subscriptions selected[/bold yellow]  [yellow](warning: >{MAX_SUBSCRIPTIONS})[/yellow]")
+        else:
+            label.update(f"[bold]{n}[/bold] subscription(s) selected")
+
     @on(Input.Changed, "#filter")
     def on_filter_changed(self, event: Input.Changed) -> None:
         self._rebuild_list(event.value)
@@ -138,6 +159,9 @@ class ScopeScreen(Screen):
         self.query_one(SelectionList).deselect_all()
 
     def action_proceed(self) -> None:
+        if self.focused is self.query_one("#filter"):
+            self.action_focus_list()
+            return
         sl = self.query_one(SelectionList)
         selected_ids: list[str] = list(sl.selected)
         if not selected_ids:
