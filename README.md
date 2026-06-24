@@ -30,6 +30,20 @@ pipx install git+https://github.com/jvik/fzf-pim
 uv tool install https://github.com/jvik/fzf-pim/releases/latest/download/fzf_pim-VERSION-py3-none-any.whl
 ```
 
+## Update
+
+**Using uv:**
+
+```sh
+uv tool upgrade fzf-pim
+```
+
+**Using pipx:**
+
+```sh
+pipx upgrade fzf-pim
+```
+
 ## Usage
 
 ```sh
