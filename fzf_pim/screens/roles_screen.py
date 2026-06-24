@@ -29,6 +29,7 @@ class RolesScreen(Screen):
         self._visible_indices: set[int] = set()
         self._loaded_count = 0
         self._rebuilding = False
+        self._auth_error_shown = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -69,7 +70,16 @@ class RolesScreen(Screen):
         self._increment_loaded()
 
     def _on_roles_error(self, sub_id: str, msg: str) -> None:
-        self.notify(f"[{sub_id[:8]}…] {msg}", severity="error", timeout=8)
+        if azure.is_auth_error(msg):
+            if not self._auth_error_shown:
+                self._auth_error_shown = True
+                self.notify(
+                    "Azure session expired. Run [bold]az login[/bold] and restart.",
+                    severity="error",
+                    timeout=30,
+                )
+        else:
+            self.notify(f"[{sub_id[:8]}…] {msg}", severity="error", timeout=8)
         self._increment_loaded()
 
     def _increment_loaded(self) -> None:

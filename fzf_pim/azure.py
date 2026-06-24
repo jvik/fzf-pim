@@ -39,6 +39,22 @@ def _run_az(*args: str) -> Any:
     return json.loads(result.stdout)
 
 
+def is_auth_error(msg: str) -> bool:
+    """Return True if *msg* indicates an expired or missing Azure CLI session."""
+    lowered = msg.lower()
+    return any(
+        token in lowered
+        for token in (
+            "refresh token",
+            "aadsts",
+            "az login",
+            "not logged in",
+            "please run",
+            "unauthorized",
+        )
+    )
+
+
 # ---------------------------------------------------------------------------
 # Data models
 # ---------------------------------------------------------------------------

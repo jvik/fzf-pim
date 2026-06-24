@@ -56,10 +56,17 @@ class ScopeScreen(Screen):
 
     def _show_error(self, msg: str) -> None:
         self.query_one("#spinner").display = False
-        self.query_one("#loading-label", Label).update(
-            f"[bold red]Error:[/bold red] {msg}\n\n"
-            "Is [bold]az[/bold] installed and are you logged in?  Run: [bold]az login[/bold]"
-        )
+        if azure.is_auth_error(msg):
+            body = (
+                "[bold red]Azure session expired.[/bold red]\n\n"
+                "Run [bold]az login[/bold] in your terminal, then restart fzf-pim."
+            )
+        else:
+            body = (
+                f"[bold red]Error:[/bold red] {msg}\n\n"
+                "Is [bold]az[/bold] installed and are you logged in?  Run: [bold]az login[/bold]"
+            )
+        self.query_one("#loading-label", Label).update(body)
 
     # ------------------------------------------------------------------
     # Actions
