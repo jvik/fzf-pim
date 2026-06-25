@@ -130,6 +130,25 @@ class EntraEligibleRole:
     is_active: bool = False
 
 
+@dataclass
+class ActiveAssignment:
+    """An active ARM role assignment (permanently assigned or PIM-activated)."""
+    role_name: str
+    scope: str
+    scope_display_name: str
+    expiry: str | None            # ISO 8601 datetime or None for permanent
+    assignment_type: str          # "Assigned" (direct/inherited) or "Activated" (PIM)
+
+
+@dataclass
+class ActiveEntraAssignment:
+    """An active Entra role assignment (permanently assigned or PIM-activated)."""
+    role_name: str
+    directory_scope_id: str       # "/" = tenant-wide
+    expiry: str | None            # ISO 8601 datetime or None for permanent
+    assignment_type: str          # "Assigned" (direct) or "Activated" (PIM)
+
+
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
@@ -668,4 +687,70 @@ def activate_entra_role(
         response.get("status"),
     )
     return response
+
+
+# ---------------------------------------------------------------------------
+# Active assignment listings (for the Assignments screen)
+# ---------------------------------------------------------------------------
+
+def list_active_arm_assignments(subscription_id: str) -> list[ActiveAssignment]:
+    """List all active ARM role assignments for the current user in *subscription_id*.
+
+    Uses roleAssignmentScheduleInstances so that expiry and assignment type
+    (Assigned vs PIM-Activated) are available.
+    """
+    scope = f"/subscriptions/{subscription_id}"
+    url = (
+        f"https://management.azure.com{scope}"
+        f"/providers/Microsoft.Authorization/roleAssignmentScheduleInstances"
+        f"?$filter=asTarget()&api-version=2020-10-01"
+    )
+    data = _run_az("rest", "--method", "GET", "--url", url)
+    assignments: list[ActiveAssignment] = []
+    for item in data.get("value", []):
+        props = item.get("properties", {})
+        expanded = props.get("expandedProperties", {})
+        assignments.append(
+            ActiveAssignment(
+                role_name=expanded.get("roleDefinition", {}).get("displayName", "Unknown"),
+                scope=expanded.get("scope", {}).get("id") or scope,
+                scope_display_name=(
+                    expanded.get("scope", {}).get("displayName") or subscription_id
+                ),
+                expiry=props.get("endDateTime"),
+                assignment_type=props.get("assignmentType", "Assigned"),
+            )
+        )
+    return assignments
+
+
+def list_active_entra_assignments(
+    on_device_code: Callable[[str], None] | None = None,
+    stop_event: threading.Event | None = None,
+) -> list[ActiveEntraAssignment]:
+    """List all active Entra role assignments for the current user.
+
+    Uses roleAssignmentScheduleInstances so that expiry and assignment type
+    (Assigned vs PIM-Activated) are available.
+    """
+    user_id = get_current_user()
+    _get_graph_token(on_device_code, stop_event)
+    filter_val = urllib.parse.quote(f"principalId eq '{user_id}'", safe="'()")
+    url = (
+        f"{_GRAPH}/v1.0/roleManagement/directory/roleAssignmentScheduleInstances"
+        f"?$filter={filter_val}&$expand=roleDefinition"
+    )
+    data = _run_graph("GET", url)
+    assignments: list[ActiveEntraAssignment] = []
+    for item in data.get("value", []):
+        role_def = item.get("roleDefinition") or {}
+        assignments.append(
+            ActiveEntraAssignment(
+                role_name=role_def.get("displayName", "Unknown"),
+                directory_scope_id=item.get("directoryScopeId", "/"),
+                expiry=item.get("endDateTime"),
+                assignment_type=item.get("assignmentType", "Assigned"),
+            )
+        )
+    return assignments
 
