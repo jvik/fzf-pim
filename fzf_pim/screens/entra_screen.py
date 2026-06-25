@@ -112,10 +112,7 @@ class EntraRolesScreen(Screen):
         if not roles:
             lbl.update("[dim]No eligible Entra roles found.[/dim]")
             return
-        lbl.update(
-            f"Entra eligible roles  ({len(roles)} found)"
-            "   [dim]j/k[/dim]=nav  [dim]a[/dim]=all  [dim]Enter[/dim]=activate"
-        )
+        lbl.update(f"Entra eligible roles  ({len(roles)} found)")
         self.query_one("#filter").display = True
         self.query_one("#role-list").display = True
         self.query_one("#status").display = True
