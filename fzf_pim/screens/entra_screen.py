@@ -25,7 +25,7 @@ from textual.widgets import (
 )
 from textual.widgets._selection_list import Selection
 
-from fzf_pim import azure
+from fzf_pim import azure, tiering
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ class EntraRolesScreen(Screen):
     BINDINGS = [
         Binding("enter", "proceed", "Activate selected", show=True, priority=True),
         Binding("escape", "back", "Back", show=True, priority=True),
+        Binding("q", "back", "Back", show=False),
         Binding("tab", "focus_list", "Next box", show=True),
         Binding("shift+tab", "focus_filter", "Prev box", show=True),
         Binding("slash", "focus_filter", "Filter", show=False),
@@ -61,23 +62,29 @@ class EntraRolesScreen(Screen):
         self.all_roles: list[azure.EntraEligibleRole] = []
         self._selected: set[int] = set()
         self._visible_indices: set[int] = set()
+        self._option_values: list[int | None] = []  # option_index → all_roles index
         self._rebuilding = False
         self._stop_event = threading.Event()
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
-        with Vertical(id="main"):
-            yield Label("Loading Entra eligible roles…", id="loading-label")
+        with Vertical(id="loading-area"):
+            yield Label("Loading Entra eligible roles\u2026", id="loading-label")
             yield LoadingIndicator(id="spinner")
-            yield Input(placeholder="Filter roles… (type to search)", id="filter")
-            yield SelectionList(id="role-list")
-            yield Label("", id="status")
+        with Horizontal(id="split"):
+            with Vertical(id="left-pane"):
+                yield Input(placeholder="Filter roles\u2026 (type to search)", id="filter")
+                yield SelectionList(id="role-list")
+                yield Label("", id="status")
+            with Vertical(id="detail-pane"):
+                yield Label(
+                    "[dim]Navigate the list to see role details.[/dim]",
+                    id="detail",
+                )
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#filter").display = False
-        self.query_one("#role-list").display = False
-        self.query_one("#status").display = False
+        self.query_one("#split").display = False
         self._load_roles()
 
     def on_unmount(self) -> None:
@@ -101,6 +108,9 @@ class EntraRolesScreen(Screen):
                 on_device_code=_on_device_code,
                 stop_event=self._stop_event,
             )
+            # Pre-warm Entra tiering cache alongside roles load.
+            if not tiering._entra_index:
+                tiering.load_entra()
             self.app.call_from_thread(self._on_roles_loaded, roles)
         except Exception as exc:
             self.app.call_from_thread(self._on_error, str(exc))
@@ -108,14 +118,11 @@ class EntraRolesScreen(Screen):
     def _on_roles_loaded(self, roles: list[azure.EntraEligibleRole]) -> None:
         self.all_roles = roles
         self.query_one("#spinner").display = False
-        lbl = self.query_one("#loading-label", Label)
         if not roles:
-            lbl.update("[dim]No eligible Entra roles found.[/dim]")
+            self.query_one("#loading-label", Label).update("[dim]No eligible Entra roles found.[/dim]")
             return
-        lbl.update(f"Entra eligible roles  ({len(roles)} found)")
-        self.query_one("#filter").display = True
-        self.query_one("#role-list").display = True
-        self.query_one("#status").display = True
+        self.query_one("#loading-area").display = False
+        self.query_one("#split").display = True
         self._rebuild_list("")
         self.query_one("#role-list").focus()
         self._update_status()
@@ -149,6 +156,7 @@ class EntraRolesScreen(Screen):
         self._rebuilding = True
         sl.clear_options()
         self._visible_indices = set()
+        self._option_values = []
         for idx, role in enumerate(self.all_roles):
             if q and q not in role.role_name.lower():
                 continue
@@ -157,7 +165,12 @@ class EntraRolesScreen(Screen):
             label = f"{role.role_name}{active_tag}{expiry_tag}"
             sl.add_option(Selection(label, idx, idx in self._selected))
             self._visible_indices.add(idx)
+            self._option_values.append(idx)
         self._rebuilding = False
+        if self._visible_indices:
+            self._update_detail(self.all_roles[min(self._visible_indices)])
+        else:
+            self.query_one("#detail", Label).update("[dim]No roles match filter.[/dim]")
 
     @on(Input.Changed, "#filter")
     def on_filter_changed(self, event: Input.Changed) -> None:
@@ -186,6 +199,50 @@ class EntraRolesScreen(Screen):
         else:
             lbl.update(f"[bold]{n}[/bold] role(s) selected")
 
+    def _update_detail(self, role: azure.EntraEligibleRole) -> None:
+        """Render tier + security info for *role* in the right-hand detail pane."""
+        detail_lbl = self.query_one("#detail", Label)
+        tier_info = tiering.get_entra_tier(role.role_definition_id)
+        expiry = azure.format_expiry(role.expiry)
+        active_tag = "\n[bold #27ae60]\u25cf Currently active[/bold #27ae60]" if role.is_active else ""
+
+        if not tier_info:
+            detail_lbl.update(
+                f"[bold]{role.role_name}[/bold]{active_tag}\n"
+                f"Expires: [dim]{expiry}[/dim]\n\n"
+                f"[dim]No tiering data available for this role.[/dim]"
+            )
+            return
+
+        tier = tier_info["tier"]
+        badge = tiering.tier_badge(tier)
+        tlabel = tiering.tier_label(tier)
+        attack = (tier_info.get("attack_path") or "").strip()
+        col = tiering.TIER_COLOUR.get(tier, "white")
+        path_headers = {0: "Attack path", 1: "Provides access to", 2: "Notes", 3: "Notes"}
+        path_header = path_headers.get(tier, "Notes")
+
+        parts: list[str] = [
+            f"{badge} [bold {col}]Tier {tier}[/bold {col}]  [dim]{tlabel}[/dim]",
+            "",
+            f"[bold]{role.role_name}[/bold]{active_tag}",
+            f"Expires: [dim]{expiry}[/dim]",
+        ]
+        if attack and attack != "-":
+            parts.extend(["", f"[bold]{path_header}:[/bold]", attack])
+        detail_lbl.update("\n".join(parts))
+
+    @on(SelectionList.SelectionHighlighted, "#role-list")
+    def on_option_highlighted(self, event: SelectionList.SelectionHighlighted) -> None:
+        """Update the detail pane when the cursor moves in the role list."""
+        idx = event.selection_index
+        if idx < 0 or idx >= len(self._option_values):
+            return
+        role_idx = self._option_values[idx]
+        if role_idx is None or role_idx < 0 or role_idx >= len(self.all_roles):
+            return
+        self._update_detail(self.all_roles[role_idx])
+
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
@@ -212,6 +269,21 @@ class EntraRolesScreen(Screen):
         if not selected_roles:
             self.notify("Select at least one role.", severity="warning")
             return
+
+        # Blast-radius warning for high-risk (Tier 0 / Tier 1) roles
+        high_risk = [
+            t for r in selected_roles
+            if (t := tiering.get_entra_tier(r.role_definition_id)) is not None
+            and t["tier"] <= 1
+        ]
+        if high_risk:
+            summary = tiering.high_risk_summary(high_risk)
+            self.notify(
+                f"Blast-radius warning: {len(high_risk)} high-risk role(s) selected\n{summary}",
+                severity="warning",
+                timeout=15,
+            )
+
         self.app.push_screen(EntraActivationScreen(selected_roles))
 
     def action_vim_down(self) -> None:
@@ -246,6 +318,7 @@ class EntraActivationScreen(Screen):
 
     BINDINGS = [
         Binding("escape", "back", "Back", show=True, priority=True),
+        Binding("q", "back", "Back", show=False),
     ]
 
     def __init__(self, roles: list[azure.EntraEligibleRole]) -> None:
