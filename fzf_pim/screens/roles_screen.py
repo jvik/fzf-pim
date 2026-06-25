@@ -21,6 +21,7 @@ class RolesScreen(Screen):
     BINDINGS = [
         Binding("enter", "proceed", "Activate selected", show=True, priority=True),
         Binding("escape", "app.pop_screen", "Back", show=True),
+        Binding("q", "app.pop_screen", "Back", show=False),
         Binding("tab", "focus_list", "Next box", show=True),
         Binding("shift+tab", "focus_filter", "Prev box", show=True),
         Binding("slash", "focus_filter", "Filter", show=False),
@@ -29,6 +30,7 @@ class RolesScreen(Screen):
         Binding("k", "vim_up", "↑", show=False),
         Binding("g", "vim_top", "Top", show=False),
         Binding("G", "vim_bottom", "Bottom", show=False),
+        Binding("x", "select_focused", "Toggle", show=False, priority=True),
     ]
 
     def __init__(self, subscription_ids: list[str]) -> None:
@@ -109,6 +111,18 @@ class RolesScreen(Screen):
                 timeout=10,
             )
             return
+        # Deduplicate: same role on the same scope may appear once per queried subscription.
+        # role_definition_id is a full resource path that includes the subscription ID,
+        # so extract just the trailing GUID for the comparison key.
+        seen: set[tuple[str, str]] = set()
+        unique: list[azure.EligibleRole] = []
+        for r in self.all_roles:
+            role_guid = r.role_definition_id.rsplit("/", 1)[-1]
+            key = (role_guid, r.scope)
+            if key not in seen:
+                seen.add(key)
+                unique.append(r)
+        self.all_roles = unique
         self.all_roles.sort(key=lambda r: (r.role_name, r.scope_display_name))
         self.query_one("#filter").display = True
         self.query_one("#role-list").display = True
@@ -200,6 +214,17 @@ class RolesScreen(Screen):
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
+
+    def action_select_focused(self) -> None:
+        """Toggle selection when role list has focus; otherwise type 'x' normally."""
+        role_list = self.query_one("#role-list", SelectionList)
+        if self.focused is role_list:
+            role_list.action_select()
+        else:
+            # Not on the list — pass x through as a character to the focused widget.
+            focused = self.focused
+            if focused is not None and hasattr(focused, "insert_text_at_cursor"):
+                focused.insert_text_at_cursor("x")
 
     def action_focus_list(self) -> None:
         self.query_one("#role-list").focus()
