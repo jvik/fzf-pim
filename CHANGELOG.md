@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/jvik/fomo/compare/v1.12.0...v1.13.0) (2026-06-25)
+
+
+### Features
+
+* visual enhancements ([32624d8](https://github.com/jvik/fomo/commit/32624d85376f3991a3d177d8bf592bf538fe8ec8))
+
 ## [1.12.0](https://github.com/jvik/fomo/compare/v1.11.0...v1.12.0) (2026-06-25)
 
 
