@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/jvik/fzf-pim/compare/v1.7.0...v1.8.0) (2026-06-25)
+
+
+### Features
+
+* enhance Entra role management with threading support for cancellation ([662afa0](https://github.com/jvik/fzf-pim/commit/662afa06b3325a858ff1ced98a88305a1d2f8134))
+
 ## [1.7.0](https://github.com/jvik/fzf-pim/compare/v1.6.0...v1.7.0) (2026-06-25)
 
 
