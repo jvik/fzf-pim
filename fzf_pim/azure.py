@@ -155,6 +155,14 @@ def get_current_user() -> str:
     return data["id"]
 
 
+def get_account_info() -> tuple[str, str]:
+    """Return (user_name, tenant_display_name) from the active az session."""
+    data = _run_az("account", "show")
+    user = data.get("user", {}).get("name", "unknown")
+    tenant = data.get("tenantDisplayName") or data.get("tenantId", "unknown")
+    return user, tenant
+
+
 def list_subscriptions() -> list[Subscription]:
     """Return all subscriptions visible to the current account."""
     data = _run_az("account", "list")

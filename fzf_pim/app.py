@@ -8,6 +8,7 @@ import subprocess
 from textual.app import App
 from textual.worker import get_current_worker
 
+from fzf_pim import azure
 from fzf_pim.screens.scope_screen import ScopeScreen
 
 
@@ -120,6 +121,15 @@ class PimApp(App):
         else:
             self.push_screen(ScopeScreen())
         self._watch_color_scheme()
+        self.run_worker(self._load_account_info, thread=True)
+
+    def _load_account_info(self) -> None:
+        try:
+            user, tenant = azure.get_account_info()
+            base = "fzf-pim  ·  Azure PIM  [DRY RUN]" if self.dry_run else "fzf-pim  ·  Azure PIM"
+            self.call_from_thread(setattr, self, "title", f"{base}  ·  {user}  ·  {tenant}")
+        except Exception:
+            pass
 
     def on_unmount(self) -> None:
         if self._color_scheme_proc is not None:
