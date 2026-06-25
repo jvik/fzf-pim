@@ -405,7 +405,7 @@ class EntraActivationScreen(Screen):
                     role,
                     justification,
                     duration,
-                    dry_run=self.app.dry_run,  # type: ignore[attr-defined]
+                    dry_run=self.app.dry_run or getattr(self.app, "demo_mode", False),  # type: ignore[attr-defined]
                 )
                 status: str = result.get("status", "Submitted")
                 label = self._format_status(status)

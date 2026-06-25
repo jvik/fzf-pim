@@ -147,7 +147,7 @@ class ActivationScreen(Screen):
                     role,
                     justification,
                     duration,
-                    dry_run=self.app.dry_run,  # type: ignore[attr-defined]
+                    dry_run=self.app.dry_run or getattr(self.app, "demo_mode", False),  # type: ignore[attr-defined]
                 )
                 status: str = result.get("properties", {}).get("status", "Submitted")
                 label = self._format_status(status)
@@ -166,7 +166,7 @@ class ActivationScreen(Screen):
                     role,
                     justification,
                     duration,
-                    dry_run=self.app.dry_run,  # type: ignore[attr-defined]
+                    dry_run=self.app.dry_run or getattr(self.app, "demo_mode", False),  # type: ignore[attr-defined]
                 )
                 status = result.get("properties", {}).get("status", "Submitted")
                 label = self._format_status(status)
