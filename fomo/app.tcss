@@ -131,6 +131,49 @@ DataTable {
     background: $surface-darken-1;
 }
 
+/* Scope screen tabs */
+#scope-tabs {
+    height: 1fr;
+}
+
+/* Entra tab pane within ScopeScreen */
+#entra-loading-area {
+    padding: 1 2;
+    height: 1fr;
+}
+
+#entra-split {
+    height: 1fr;
+}
+
+#entra-left-pane {
+    width: 2fr;
+    padding: 0 1;
+}
+
+#entra-detail-pane {
+    width: 1fr;
+    border-left: solid $panel;
+    padding: 1 2;
+    overflow-y: auto;
+    background: $boost;
+}
+
+#entra-detail {
+    width: 1fr;
+    height: auto;
+}
+
+#entra-filter {
+    margin: 1 0;
+}
+
+#entra-status {
+    height: 1;
+    color: $text-muted;
+    margin-top: 1;
+}
+
 /* Assignments screen */
 #assignment-tabs {
     height: 1fr;

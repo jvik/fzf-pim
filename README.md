@@ -15,7 +15,7 @@ A terminal UI for activating Azure PIM eligible roles with multiselect.
 
 ## Screenshots
 
-### Subscription selection
+### Subscription / Entra tab
 
 ![Scope screen](docs/screenshots/01-scope.svg)
 
@@ -27,7 +27,7 @@ A terminal UI for activating Azure PIM eligible roles with multiselect.
 
 ![Activation screen](docs/screenshots/03-activation-done.svg)
 
-### Entra roles
+### Entra roles tab
 
 ![Entra roles screen](docs/screenshots/04-entra.svg)
 
@@ -89,7 +89,7 @@ fomo
 
 ### Entra roles
 
-1. Select *Entra roles* from the main menu
+1. Switch to the **Entra** tab with `l` (or left/right arrow keys on the tab bar)
 2. The app fetches your eligible directory roles via Microsoft Graph (first use requires a **device code** browser sign-in)
 3. Multiselect the roles to activate (already-active roles are marked)
 4. Choose a duration, enter a justification, and confirm

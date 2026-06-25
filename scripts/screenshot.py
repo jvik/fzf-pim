@@ -149,16 +149,16 @@ async def take_entra_screen(out: Path) -> None:
     async with app.run_test(size=(COLS, ROWS)) as pilot:
         await _wait_for(pilot, lambda: _has_options(app, "#sub-list"))
 
-        # Navigate to the Entra screen via the 'e' keybind on the scope screen
-        await pilot.press("e")
+        # Switch to the Entra tab
+        await pilot.press("l")
 
         await _wait_for(
             pilot,
-            lambda: _has_options(app, "#role-list"),
+            lambda: _has_options(app, "#entra-role-list"),
             steps=120,
         )
 
-        rl = _sl(app, "#role-list")
+        rl = _sl(app, "#entra-role-list")
         rl.focus()
         for i in range(min(2, rl.option_count)):
             rl.select(rl.get_option_at_index(i))

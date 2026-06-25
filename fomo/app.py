@@ -149,11 +149,8 @@ class PimApp(App):
             self.title = "fomo  ·  Azure PIM  [DEMO]"
         elif self.dry_run:
             self.title = "fomo  ·  Azure PIM  [DRY RUN]"
-        if self.entra:
-            from fomo.screens.entra_screen import EntraRolesScreen
-            self.push_screen(EntraRolesScreen())
-        else:
-            self.push_screen(ScopeScreen())
+        initial_tab = "tab-entra" if self.entra else "tab-azure"
+        self.push_screen(ScopeScreen(initial_tab=initial_tab))
         self._watch_color_scheme()
         self.run_worker(self._load_account_info, thread=True)
 
