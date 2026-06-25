@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/jvik/fzf-pim/compare/v1.6.0...v1.7.0) (2026-06-25)
+
+
+### Features
+
+* introduce Entra role management with device code flow and error handling ([a4254f3](https://github.com/jvik/fzf-pim/commit/a4254f367d80469bee3cf366ff11d5ef6cce1dd6))
+
+
+### Bug Fixes
+
+* update expiry formatting to return 'Permanent' and adjust display style in Entra roles screen ([6414d5a](https://github.com/jvik/fzf-pim/commit/6414d5ab90049195661fce73aec52548892591f6))
+
 ## [1.6.0](https://github.com/jvik/fzf-pim/compare/v1.5.0...v1.6.0) (2026-06-25)
 
 
