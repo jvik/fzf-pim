@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.3](https://github.com/jvik/fzf-pim/compare/v1.8.2...v1.8.3) (2026-06-25)
+
+
+### Bug Fixes
+
+* enhance back action handling in ActivationScreen and improve subscription warning display in ScopeScreen ([bca380e](https://github.com/jvik/fzf-pim/commit/bca380eb28ff153c80d7e949cd305810a8aec945))
+
 ## [1.8.2](https://github.com/jvik/fzf-pim/compare/v1.8.1...v1.8.2) (2026-06-25)
 
 
