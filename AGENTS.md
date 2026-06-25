@@ -45,6 +45,27 @@ fzf_pim/
 - No external HTTP libraries — use `subprocess` + `az rest` only.
 - `from __future__ import annotations` at the top of every module.
 
+## Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<optional scope>): <short description>
+```
+
+| Type | When to use |
+|------|-------------|
+| `feat` | New user-facing feature |
+| `fix` | Bug fix |
+| `chore` | Maintenance, dependency bumps, tooling |
+| `docs` | Documentation only |
+| `refactor` | Code change with no behaviour change |
+| `test` | Adding or updating tests |
+| `style` | Formatting, whitespace (no logic change) |
+
+Breaking changes: append `!` after the type (`feat!:`) and add a `BREAKING CHANGE:` footer.  
+Releases are driven by release-please; `feat` bumps the minor version, `fix` bumps the patch, breaking changes bump the major.
+
 ## Do / don't
 
 - **Do** keep Azure logic in `azure.py`, not in screens.
