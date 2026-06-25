@@ -29,6 +29,7 @@ class RolesScreen(Screen):
         Binding("k", "vim_up", "↑", show=False),
         Binding("g", "vim_top", "Top", show=False),
         Binding("G", "vim_bottom", "Bottom", show=False),
+        Binding("x", "select_focused", "Toggle", show=False, priority=True),
     ]
 
     def __init__(self, subscription_ids: list[str]) -> None:
@@ -200,6 +201,17 @@ class RolesScreen(Screen):
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
+
+    def action_select_focused(self) -> None:
+        """Toggle selection when role list has focus; otherwise type 'x' normally."""
+        role_list = self.query_one("#role-list", SelectionList)
+        if self.focused is role_list:
+            role_list.action_select()
+        else:
+            # Not on the list — pass x through as a character to the focused widget.
+            focused = self.focused
+            if focused is not None and hasattr(focused, "insert_text_at_cursor"):
+                focused.insert_text_at_cursor("x")
 
     def action_focus_list(self) -> None:
         self.query_one("#role-list").focus()

@@ -22,7 +22,7 @@ class ScopeScreen(Screen):
         Binding("slash", "focus_filter", "Filter", show=True),
         Binding("tab", "focus_list", "Next box", show=True),
         Binding("shift+tab", "focus_filter", "Prev box", show=True),
-        Binding("escape", "focus_list", "Focus list", show=False),
+        Binding("escape", "escape_key", "Back to filter", show=False),
         Binding("a", "select_all", "All", show=True),
         Binding("n", "select_none", "None", show=True),
         Binding("q", "quit_app", "Quit", show=True),
@@ -30,6 +30,7 @@ class ScopeScreen(Screen):
         Binding("k", "vim_up", "↑", show=False),
         Binding("g", "vim_top", "Top", show=False),
         Binding("G", "vim_bottom", "Bottom", show=False),
+        Binding("x", "select_focused", "Toggle", show=False, priority=True),
     ]
 
     def __init__(self) -> None:
@@ -145,6 +146,10 @@ class ScopeScreen(Screen):
     def action_focus_list(self) -> None:
         self.query_one("#sub-list").focus()
 
+    def action_escape_key(self) -> None:
+        if self.focused is not self.query_one("#filter"):
+            self.query_one("#filter").focus()
+
     def action_select_all(self) -> None:
         self.query_one(SelectionList).select_all()
 
@@ -169,6 +174,15 @@ class ScopeScreen(Screen):
             return
         from fzf_pim.screens.roles_screen import RolesScreen
         self.app.push_screen(RolesScreen(selected_ids))
+
+    def action_select_focused(self) -> None:
+        sub_list = self.query_one("#sub-list", SelectionList)
+        if self.focused is sub_list:
+            sub_list.action_select()
+        else:
+            focused = self.focused
+            if focused is not None and hasattr(focused, "insert_text_at_cursor"):
+                focused.insert_text_at_cursor("x")
 
     def action_quit_app(self) -> None:
         self.app.exit()
