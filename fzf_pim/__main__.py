@@ -353,6 +353,12 @@ def main() -> None:
 
     positional: list[str] = args.positional
 
+    if args.entra and args.mg:
+        parser.error("--entra and --mg are mutually exclusive")
+
+    if args.mg and args.reason is None:
+        parser.error("--mg requires -r/--reason for non-interactive activation")
+
     if args.reason is not None:
         if args.entra:
             if len(positional) != 1:
