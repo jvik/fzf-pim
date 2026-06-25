@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -214,14 +215,14 @@ class ActivationScreen(Screen):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _format_status(status: str) -> str:
+    def _format_status(status: str) -> Text:
         if status in ("Provisioned", "Granted", "DryRun"):
-            return f"✓ {status}"
+            return Text.from_markup(f"[bold green]✓ {status}[/bold green]")
         if "Pending" in status or status in ("Accepted", "ScheduleCreated"):
-            return f"⏳ {status}"
+            return Text.from_markup(f"[bold yellow]⏳ {status}[/bold yellow]")
         if status in ("Failed", "Denied", "Canceled", "TimedOut"):
-            return f"✗ {status}"
-        return status
+            return Text.from_markup(f"[bold red]✗ {status}[/bold red]")
+        return Text(status)
 
     # ------------------------------------------------------------------
     # Actions

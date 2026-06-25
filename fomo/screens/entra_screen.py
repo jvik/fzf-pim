@@ -25,6 +25,8 @@ from textual.widgets import (
 )
 from textual.widgets._selection_list import Selection
 
+from rich.text import Text
+
 from fomo import azure, tiering
 
 log = logging.getLogger(__name__)
@@ -447,14 +449,14 @@ class EntraActivationScreen(Screen):
             self.notify("Activation requests submitted.", severity="information")
 
     @staticmethod
-    def _format_status(status: str) -> str:
+    def _format_status(status: str) -> Text:
         if status in ("Provisioned", "Granted", "DryRun"):
-            return f"✓ {status}"
+            return Text.from_markup(f"[bold green]✓ {status}[/bold green]")
         if "Pending" in status or status in ("Accepted", "ScheduleCreated"):
-            return f"⏳ {status}"
+            return Text.from_markup(f"[bold yellow]⏳ {status}[/bold yellow]")
         if status in ("Failed", "Denied", "Canceled", "TimedOut"):
-            return f"✗ {status}"
-        return status
+            return Text.from_markup(f"[bold red]✗ {status}[/bold red]")
+        return Text(status)
 
     # ------------------------------------------------------------------
     # Actions

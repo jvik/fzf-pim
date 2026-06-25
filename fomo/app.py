@@ -6,10 +6,39 @@ import os
 import subprocess
 
 from textual.app import App
+from textual.theme import Theme
 from textual.worker import get_current_worker
 
 from fomo import azure
 from fomo.screens.scope_screen import ScopeScreen
+
+FOMO_DARK = Theme(
+    name="fomo-dark",
+    primary="#0078D4",
+    secondary="#50E6FF",
+    background="#141414",
+    surface="#1c1c1c",
+    panel="#2a2a2a",
+    boost="#222222",
+    success="#4ebf71",
+    warning="#ffa62b",
+    error="#e05450",
+    dark=True,
+)
+
+FOMO_LIGHT = Theme(
+    name="fomo-light",
+    primary="#0078D4",
+    secondary="#004578",
+    background="#f0f2f5",
+    surface="#ffffff",
+    panel="#d4d8de",
+    boost="#f8f9fa",
+    success="#2e7d32",
+    warning="#e65100",
+    error="#c62828",
+    dark=False,
+)
 
 
 def _system_is_dark() -> bool:
@@ -107,10 +136,12 @@ class PimApp(App):
 
     def __init__(self, dry_run: bool = False, entra: bool = False, demo_mode: bool = False) -> None:
         super().__init__()
+        self.register_theme(FOMO_DARK)
+        self.register_theme(FOMO_LIGHT)
         self.dry_run = dry_run
         self.entra = entra
         self.demo_mode = demo_mode
-        self.theme = "textual-dark" if _system_is_dark() else "textual-light"
+        self.theme = "fomo-dark" if _system_is_dark() else "fomo-light"
         self._color_scheme_proc: subprocess.Popen | None = None
 
     def on_mount(self) -> None:
@@ -185,9 +216,9 @@ class PimApp(App):
                     if parts and parts[0] == "uint32" and parts[1].isdigit():
                         scheme = int(parts[1])
                         if scheme == 1:
-                            self.call_from_thread(setattr, self, "theme", "textual-dark")
+                            self.call_from_thread(setattr, self, "theme", "fomo-dark")
                         elif scheme == 2:
-                            self.call_from_thread(setattr, self, "theme", "textual-light")
+                            self.call_from_thread(setattr, self, "theme", "fomo-light")
                         namespace = None
                         key = None
                 else:

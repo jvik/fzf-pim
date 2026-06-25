@@ -4,6 +4,11 @@ Screen {
     background: $surface;
 }
 
+Header {
+    background: $primary;
+    color: $foreground;
+}
+
 /* Shared layout */
 #main {
     padding: 1 2;
@@ -14,6 +19,7 @@ Screen {
 #loading-label {
     margin: 1 0;
     color: $text-muted;
+    text-style: italic;
 }
 
 #status {
@@ -25,7 +31,7 @@ Screen {
 /* Scope screen */
 SelectionList {
     height: 1fr;
-    border: tall $panel;
+    border: round $panel;
 }
 
 /* SelectionList checkbox contrast fix (dark + light mode) */
@@ -47,7 +53,7 @@ SelectionList > .selection-list--button-selected-highlighted {
 
 /* Roles screen */
 #filter {
-    margin-bottom: 1;
+    margin: 1 0;
 }
 
 /* Split-view selection screens (roles + entra) */
@@ -70,6 +76,7 @@ SelectionList > .selection-list--button-selected-highlighted {
     border-left: solid $panel;
     padding: 1 2;
     overflow-y: auto;
+    background: $boost;
 }
 
 #detail {
@@ -81,7 +88,7 @@ SelectionList > .selection-list--button-selected-highlighted {
 DataTable {
     height: auto;
     max-height: 14;
-    border: tall $panel;
+    border: round $panel;
     margin-bottom: 1;
 }
 
@@ -102,7 +109,7 @@ DataTable {
 
 /* Global assignments warning box */
 #global-roles-box {
-    border: tall $warning;
+    border: round $warning;
     padding: 0 1;
     margin-bottom: 1;
 }
@@ -119,7 +126,7 @@ DataTable {
 /* Error log panel (shown only on activation errors) */
 #error-log {
     height: 10;
-    border: tall $error;
+    border: round $error;
     margin-top: 1;
     background: $surface-darken-1;
 }
