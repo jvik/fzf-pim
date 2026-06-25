@@ -16,11 +16,12 @@ def build_parser() -> argparse.ArgumentParser:
             "Authentication is fully delegated to the active 'az' CLI session. "
             "Run 'az login' before using this tool.\n\n"
             "Non-interactive (CLI-only) activation:\n"
-            "  fzf-pim ROLE -r REASON [-t DURATION]\n"
-            "  fzf-pim SUBSCRIPTION ROLE -r REASON [-t DURATION]\n\n"
+            "  Azure RBAC:  fzf-pim [SUBSCRIPTION] ROLE -r REASON [-t DURATION]\n"
+            "  Entra ID:    fzf-pim --entra ROLE -r REASON [-t DURATION]\n\n"
             "Examples:\n"
             '  fzf-pim "Key Vault Administrator" -r "Break-glass" -t 1h\n'
-            '  fzf-pim my-sub "Key Vault Administrator" -r "Break-glass" -t 30m'
+            '  fzf-pim my-sub "Key Vault Administrator" -r "Break-glass" -t 30m\n'
+            '  fzf-pim --entra "Global Reader" -r "Audit review" -t 1h'
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -30,7 +31,8 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="ARG",
         help=(
             "When --reason/-r is also given: directly activate a role without the TUI. "
-            "Provide one argument (ROLE) or two (SUBSCRIPTION ROLE). "
+            "Azure RBAC: provide one argument (ROLE) or two (SUBSCRIPTION ROLE). "
+            "Entra ID (--entra): provide one argument (ROLE). "
             "SUBSCRIPTION may be a name substring or full ID."
         ),
     )
@@ -55,7 +57,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--entra",
         action="store_true",
-        help="Start in Microsoft Entra PIM mode (Entra ID roles instead of Azure RBAC).",
+        help=(
+            "Activate Microsoft Entra ID roles instead of Azure RBAC. "
+            "Can be combined with -r/--reason for non-interactive mode."
+        ),
     )
     parser.add_argument(
         "--log",
@@ -153,6 +158,77 @@ def _cli_activate(
         sys.exit(1)
 
 
+def _cli_activate_entra(
+    role_name: str,
+    justification: str,
+    duration: str,
+    dry_run: bool = False,
+) -> None:
+    """Non-interactive Entra activation: find matching eligible roles and activate them."""
+    from fzf_pim import azure
+
+    try:
+        iso_duration = azure.parse_duration(duration)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    def _on_device_code(message: str) -> None:
+        url, _, code = message.partition("\n")
+        print()
+        print("Sign in to Microsoft Graph:")
+        print(f"  1. Open:       {url}")
+        print(f"  2. Enter code: {code}")
+        print()
+
+    print("Fetching Entra eligible roles…")
+    try:
+        all_roles = azure.list_entra_eligible_roles(on_device_code=_on_device_code)
+    except Exception as exc:
+        print(f"Error fetching Entra roles: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    if not all_roles:
+        print("Error: No eligible Entra PIM roles found.", file=sys.stderr)
+        sys.exit(1)
+
+    role_lower = role_name.lower()
+    exact = [r for r in all_roles if r.role_name.lower() == role_lower]
+    matching = exact or [r for r in all_roles if role_lower in r.role_name.lower()]
+
+    if not matching:
+        print(f"Error: No eligible Entra role matching '{role_name}' found.", file=sys.stderr)
+        print("Available eligible Entra roles:", file=sys.stderr)
+        for name in sorted({r.role_name for r in all_roles}):
+            print(f"  {name}", file=sys.stderr)
+        sys.exit(1)
+
+    inactive = [r for r in matching if not r.is_active]
+    if not inactive:
+        print(f"All {len(matching)} matching role(s) are already active.")
+        return
+    if len(inactive) < len(matching):
+        skipped = len(matching) - len(inactive)
+        print(f"Skipping {skipped} already-active role(s).")
+    matching = inactive
+
+    print(f"Activating {len(matching)} Entra role(s)…")
+    errors = 0
+    for role in matching:
+        print(f"  • {role.role_name}… ", end="", flush=True)
+        try:
+            result = azure.activate_entra_role(role, justification, iso_duration, dry_run=dry_run)
+            status = result.get("status", "Submitted")
+            print(f"✓ {status}")
+        except Exception as exc:
+            print("✗")
+            print(f"    {exc}", file=sys.stderr)
+            errors += 1
+
+    if errors:
+        sys.exit(1)
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
@@ -170,6 +246,18 @@ def main() -> None:
     positional: list[str] = args.positional
 
     if args.reason is not None:
+        if args.entra:
+            if len(positional) != 1:
+                parser.error(
+                    "Provide exactly one positional argument (ROLE) when using --entra --reason/-r"
+                )
+            _cli_activate_entra(
+                role_name=positional[0],
+                justification=args.reason,
+                duration=args.duration,
+                dry_run=args.dry_run,
+            )
+            return
         if len(positional) == 1:
             subscription = None
             role_name = positional[0]

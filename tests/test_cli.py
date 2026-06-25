@@ -100,3 +100,21 @@ def test_parser_long_flags() -> None:
     assert args.positional == ["my-sub", "Reader"]
     assert args.reason == "routine"
     assert args.duration == "2h"
+
+
+def test_parser_entra_cli_mode() -> None:
+    args = build_parser().parse_args(
+        ["--entra", "Global Reader", "-r", "Audit review", "-t", "1h"]
+    )
+    assert args.entra is True
+    assert args.positional == ["Global Reader"]
+    assert args.reason == "Audit review"
+    assert args.duration == "1h"
+
+
+def test_parser_entra_tui_mode() -> None:
+    """--entra without -r should still launch TUI (reason is None)."""
+    args = build_parser().parse_args(["--entra"])
+    assert args.entra is True
+    assert args.reason is None
+    assert args.positional == []
