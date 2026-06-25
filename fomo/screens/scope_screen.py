@@ -60,7 +60,11 @@ class ScopeScreen(Screen):
     @work(thread=True)
     def _load_subs(self) -> None:
         try:
-            subs = azure.list_subscriptions()
+            if getattr(self.app, "demo_mode", False):
+                from fomo import demo as demo_data
+                subs = demo_data.list_subscriptions()
+            else:
+                subs = azure.list_subscriptions()
             self.app.call_from_thread(self._show_subs, subs)
         except Exception as exc:
             self.app.call_from_thread(self._show_error, str(exc))

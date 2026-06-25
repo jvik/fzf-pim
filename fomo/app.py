@@ -105,15 +105,18 @@ class PimApp(App):
     ENABLE_COMMAND_PALETTE = False
     BINDINGS = [("ctrl+c", "quit", "Quit")]
 
-    def __init__(self, dry_run: bool = False, entra: bool = False) -> None:
+    def __init__(self, dry_run: bool = False, entra: bool = False, demo_mode: bool = False) -> None:
         super().__init__()
         self.dry_run = dry_run
         self.entra = entra
+        self.demo_mode = demo_mode
         self.theme = "textual-dark" if _system_is_dark() else "textual-light"
         self._color_scheme_proc: subprocess.Popen | None = None
 
     def on_mount(self) -> None:
-        if self.dry_run:
+        if self.demo_mode:
+            self.title = "fomo  ·  Azure PIM  [DEMO]"
+        elif self.dry_run:
             self.title = "fomo  ·  Azure PIM  [DRY RUN]"
         if self.entra:
             from fomo.screens.entra_screen import EntraRolesScreen
@@ -124,6 +127,14 @@ class PimApp(App):
         self.run_worker(self._load_account_info, thread=True)
 
     def _load_account_info(self) -> None:
+        if self.demo_mode:
+            from fomo import demo as demo_data
+            base = "fomo  ·  Azure PIM  [DEMO]"
+            self.call_from_thread(
+                setattr, self, "title",
+                f"{base}  ·  {demo_data.DEMO_USER}  ·  {demo_data.DEMO_TENANT}",
+            )
+            return
         try:
             user, tenant = azure.get_account_info()
             base = "fomo  ·  Azure PIM  [DRY RUN]" if self.dry_run else "fomo  ·  Azure PIM"

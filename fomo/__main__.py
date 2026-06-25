@@ -75,6 +75,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Launch with dummy data — no Azure auth required (for screenshots).",
+    )
+    parser.add_argument(
         "--log",
         metavar="FILE",
         default=None,
@@ -408,7 +413,7 @@ def main() -> None:
 
     from fomo.app import PimApp
 
-    PimApp(dry_run=args.dry_run, entra=args.entra).run()
+    PimApp(dry_run=args.dry_run, entra=args.entra, demo_mode=args.demo).run()
 
 
 if __name__ == "__main__":

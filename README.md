@@ -2,8 +2,30 @@
 
 A terminal UI for activating Azure PIM eligible roles with multiselect.
 
-Azure (ARM) authentication is fully delegated to the active `az` CLI session.
-Entra role management uses Microsoft Graph via an OAuth 2.0 device code flow; the resulting refresh token is cached locally at `~/.cache/fomo/graph_token.json` (mode `0600`) so the browser sign-in only runs once.
+## Features
+
+- **Multiselect activation** — pick multiple eligible roles across subscriptions in one go
+- **Azure RBAC & Entra roles** — supports both subscription/resource-scoped PIM roles and Entra directory roles (Global Administrator, etc.)
+- **Management group scope** — activate roles at management group level
+- **Parallel activation** — all selected roles are activated concurrently with per-role progress tracking
+- **Non-interactive CLI mode** — skip the TUI with `-r`/`--reason` for scripting and automation
+- **Dry-run mode** — simulate activation without making any real API calls
+- **Cached Entra token** — device code sign-in only required once; refresh token stored at `~/.cache/fomo/graph_token.json`
+- **Verbose logging** — write full API call/response logs to a file for troubleshooting
+
+## Screenshots
+
+### Subscription selection
+
+![Scope screen](docs/screenshots/01-scope.svg)
+
+### Role selection
+
+![Roles — selected](docs/screenshots/02-roles-selected.svg)
+
+### Activation
+
+![Activation screen](docs/screenshots/03-activation.svg)
 
 ## Platform support
 
@@ -55,11 +77,6 @@ pipx upgrade fomo
 fomo
 ```
 
-The app opens a role-type selector. Choose between:
-
-- **Azure roles** — subscription/resource-scoped PIM roles via Azure ARM
-- **Entra roles** — Microsoft Entra directory roles (Global Administrator, etc.) via Microsoft Graph
-
 ### Azure roles
 
 1. Select a subscription scope
@@ -69,9 +86,7 @@ The app opens a role-type selector. Choose between:
 ### Entra roles
 
 1. Select *Entra roles* from the main menu
-2. The app fetches your eligible directory roles via Microsoft Graph
-   - On first use a **device code** sign-in prompt is shown; open the displayed URL, enter the code, and authenticate in your browser
-   - The refresh token is saved to `~/.cache/fomo/graph_token.json` for future sessions
+2. The app fetches your eligible directory roles via Microsoft Graph (first use requires a **device code** browser sign-in)
 3. Multiselect the roles to activate (already-active roles are marked)
 4. Choose a duration, enter a justification, and confirm
 

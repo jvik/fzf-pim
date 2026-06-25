@@ -92,6 +92,14 @@ class EntraRolesScreen(Screen):
 
     @work(thread=True)
     def _load_roles(self) -> None:
+        if getattr(self.app, "demo_mode", False):
+            from fomo import demo as demo_data
+            roles = demo_data.list_entra_eligible_roles()
+            if not tiering._entra_index:
+                tiering.load_entra()
+            self.app.call_from_thread(self._on_roles_loaded, roles)
+            return
+
         def _on_device_code(message: str) -> None:
             url, _, code = message.partition("\n")
             def _update() -> None:

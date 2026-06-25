@@ -76,7 +76,11 @@ class RolesScreen(Screen):
     @work(thread=True)
     def _load_roles_for_sub(self, sub_id: str) -> None:
         try:
-            roles = azure.list_eligible_roles(sub_id)
+            if getattr(self.app, "demo_mode", False):
+                from fomo import demo as demo_data
+                roles = demo_data.list_eligible_roles(sub_id)
+            else:
+                roles = azure.list_eligible_roles(sub_id)
             # Pre-warm tiering cache on the first worker that runs (no-op if already loaded).
             if not tiering._azure_index:
                 tiering.load_azure()
