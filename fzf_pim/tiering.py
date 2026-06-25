@@ -36,6 +36,13 @@ TIER_LABEL: dict[int, str] = {
     2: "T2 · data explorer",
     3: "T3 · unprivileged",
 }
+# Rich-markup colors readable in both light and dark terminal themes
+TIER_COLOUR: dict[int, str] = {
+    0: "#c0392b",  # dark red
+    1: "#d35400",  # dark orange
+    2: "#2980b9",  # medium blue
+    3: "#27ae60",  # medium green
+}
 
 
 class TierInfo(TypedDict):

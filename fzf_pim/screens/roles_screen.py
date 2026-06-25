@@ -207,7 +207,7 @@ class RolesScreen(Screen):
         tier_info = tiering.get_azure_tier(role.role_definition_id)
         scope = role.scope_display_name
         expiry = azure.format_expiry(role.expiry)
-        active_tag = "\n[bold green]● Currently active[/bold green]" if role.is_active else ""
+        active_tag = "\n[bold #27ae60]● Currently active[/bold #27ae60]" if role.is_active else ""
 
         if not tier_info:
             detail_lbl.update(
@@ -222,8 +222,7 @@ class RolesScreen(Screen):
         badge = tiering.tier_badge(tier)
         tlabel = tiering.tier_label(tier)
         attack = (tier_info.get("attack_path") or "").strip()
-        tier_colours = {0: "red", 1: "yellow", 2: "cyan", 3: "green"}
-        col = tier_colours.get(tier, "white")
+        col = tiering.TIER_COLOUR.get(tier, "white")
         path_headers = {0: "Attack path", 1: "Lateral movement", 2: "Worst case", 3: "Worst case"}
         path_header = path_headers.get(tier, "Notes")
 

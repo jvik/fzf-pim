@@ -203,7 +203,7 @@ class EntraRolesScreen(Screen):
         detail_lbl = self.query_one("#detail", Label)
         tier_info = tiering.get_entra_tier(role.role_definition_id)
         expiry = azure.format_expiry(role.expiry)
-        active_tag = "\n[bold green]\u25cf Currently active[/bold green]" if role.is_active else ""
+        active_tag = "\n[bold #27ae60]\u25cf Currently active[/bold #27ae60]" if role.is_active else ""
 
         if not tier_info:
             detail_lbl.update(
@@ -217,8 +217,7 @@ class EntraRolesScreen(Screen):
         badge = tiering.tier_badge(tier)
         tlabel = tiering.tier_label(tier)
         attack = (tier_info.get("attack_path") or "").strip()
-        tier_colours = {0: "red", 1: "yellow", 2: "cyan", 3: "green"}
-        col = tier_colours.get(tier, "white")
+        col = tiering.TIER_COLOUR.get(tier, "white")
         path_headers = {0: "Attack path", 1: "Provides access to", 2: "Notes", 3: "Notes"}
         path_header = path_headers.get(tier, "Notes")
 
